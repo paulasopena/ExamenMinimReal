@@ -2,37 +2,38 @@ package edu.upc.dsa.models;
 
 import edu.upc.dsa.util.RandomUtils;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
 
 public class Game {
     String id;
     String name;
     String description;
-    int totalPoints;
-    int active;
-    int level;
+    int numberOfLevels;
     List<Activity> activityOfTheGame;
     List<Levels> levels;
+    List<Departure> departures;
+    List<User> gamers;
     public Game(){};
     public Game(String name, String description,int numberOfLevels){
         this.name=name;
         this.description=description;
         this.id = RandomUtils.getId();
-        this.totalPoints =50;
-        this.active=0;
-        this.level=0;
         this.activityOfTheGame=new ArrayList<>();
         this.levels=new ArrayList<>();
+        this.numberOfLevels=numberOfLevels;
+        this.departures=new ArrayList<>();
+        this.gamers=new ArrayList<>();
         this.setLevels(numberOfLevels);
     }
-
+    public List<Departure> getDepartures(){
+        return this.departures;
+    }
     public String getId() {
         return id;
     }
-
+    public int getNumberOfLevels(){
+        return numberOfLevels;
+    }
     public void setId(String id) {
         this.id = id;
     }
@@ -51,22 +52,6 @@ public class Game {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public int getTotalPoints() {
-        return totalPoints;
-    }
-
-    public void setTotalPoints(int totalPoints) {
-        this.totalPoints = totalPoints;
-    }
-
-    public int getActive() {
-        return active;
-    }
-
-    public void setActive(int active) {
-        this.active = active;
     }
 
     public List<Activity> getActivityOfTheGame() {
@@ -93,13 +78,25 @@ public class Game {
         }
 
     }
-    public int getLevel(){
-        return(this.level);
-    }
-    public void setLevel(int levelActual){
-        this.level=levelActual;
-    }
+
     public List<Levels> getListOfLevelsOfGame(){
         return this.levels;
+    }
+    public Departure getDepartureById(String id){
+        for (Departure departure : this.departures) {
+            if (Objects.equals(departure.getIdDeparture(), id)) {
+                return departure;
+            }
+        }
+        return null;
+    }
+    public List<User> getGamers(){
+        return this.gamers;
+    }
+    public void AddGamerToList(User user){
+        this.gamers.add(user);
+    }
+    public Departure getLastDeparture(){
+        return this.departures.get(this.departures.size()-1);
     }
 }

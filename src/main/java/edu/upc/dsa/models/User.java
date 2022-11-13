@@ -2,9 +2,7 @@ package edu.upc.dsa.models;
 
 import edu.upc.dsa.util.RandomUtils;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class User {
     public String id;
@@ -12,7 +10,8 @@ public class User {
     String surname;
     String mail;
     String password;
-    List<Game> partidas;
+    Map<String,Game> gamesAndDepartures;
+
     public User(){};
     public User(String name, String surname, String mail, String password){
         this.name=name;
@@ -20,7 +19,7 @@ public class User {
         this.mail=mail;
         this.password=password;
         this.id = RandomUtils.getId();
-        this.partidas=new ArrayList<>();
+        this.gamesAndDepartures =new HashMap<String,Game>();
     }
 
     public String getId() {
@@ -63,17 +62,17 @@ public class User {
         this.password = password;
     }
 
-    public List<Game> getGames() {
-        return this.partidas;
+    public Map<String,Game> getGames() {
+        return this.gamesAndDepartures;
     }
 
     public void addGameToList(Game game) {
-        this.partidas.add(game);
+        this.gamesAndDepartures.put(game.getId(),game);
     }
     public Game getGameWithID(String idGame){
-        for(int i=0; i<this.partidas.size();i++){
-            if(Objects.equals(this.partidas.get(i).getId(), idGame))
-                return this.partidas.get(i);
+        for(int i = 0; i<this.gamesAndDepartures.size(); i++){
+            if(Objects.equals(this.gamesAndDepartures.get(i).getId(), idGame))
+                return this.gamesAndDepartures.get(i);
         }
         return null;
     }

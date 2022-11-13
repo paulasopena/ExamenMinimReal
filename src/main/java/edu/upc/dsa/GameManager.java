@@ -1,9 +1,7 @@
 package edu.upc.dsa;
 
 import edu.upc.dsa.exceptions.*;
-import edu.upc.dsa.models.Game;
-import edu.upc.dsa.models.Track;
-import edu.upc.dsa.models.User;
+import edu.upc.dsa.models.*;
 
 import javax.jws.soap.SOAPBinding;
 import java.util.HashMap;
@@ -31,10 +29,23 @@ public interface GameManager {
 
     Map<String, User> getUsers();
 
-    int ActualLevel(String idUser) throws UserDoesNotExistException, NoActiveGameException;
 
+    int ActualLevel(String idUser) throws UserDoesNotExistException,NoActiveGameException;
     int ActualPoints(String idUser) throws UserDoesNotExistException,NoActiveGameException;
-    int ChangeOfLevel(String idUser) throws UserDoesNotExistException, NoActiveGameException;
+    Activity ChangeOfLevel(String idUser,String idGame) throws UserDoesNotExistException, NoActiveGameException;
+    Departure SearchForActiveDeparture(String idUser) throws NoActiveGameException;
+    void ControlOfExistenceOfUser(String idUser) throws UserDoesNotExistException;
+    void ControlOfExistenceOfGame(String idGame) throws GameDoesNotExistException;
+    void ControlOfMoreThanOneActiveGame(String idUser) throws MoreThanOneActiveGame;
 
-    List<Game> getGamesOfUser(String idAlba) throws UserDoesNotExistException;
+    void ControlOfNoActiveGame(String idUser) throws NoActiveGameException;
+
+
+    void EndingGame(String idUser, String idGame) throws UserDoesNotExistException, NoActiveGameException;
+
+    List<User> usersByPoints(String idGame) throws GameDoesNotExistException;
+
+    List<Activity> getActivityOfUser(String idUser, String idGame) throws UserDoesNotExistException;
+
+    List<Departure> getGames(String idUser) throws UserDoesNotExistException;
 }

@@ -2,9 +2,10 @@ package edu.upc.dsa;
 
 import edu.upc.dsa.exceptions.*;
 import edu.upc.dsa.models.Activity;
+import edu.upc.dsa.models.Departure;
 import edu.upc.dsa.models.Game;
-import edu.upc.dsa.models.Track;
 
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 import edu.upc.dsa.models.User;
@@ -14,11 +15,14 @@ public class GameManagerImpl implements GameManager {
     private static GameManager instance;
     final static Logger logger = Logger.getLogger(GameManagerImpl.class);
     Map<String, User> users;
-    Map<String, Game> games;
+    Map<String,Game> games;
+    Game gameUnmodified;
 
     public GameManagerImpl() {
         this.users= new HashMap<>();
-        this.games=new HashMap<>();
+        this.games=new HashMap<String,Game>();
+        this.gameUnmodified=new Game();
+
     }
 
     public static GameManager getInstance() {
@@ -59,30 +63,24 @@ public class GameManagerImpl implements GameManager {
     }
 
     @Override
-    public void StartGame(String idUser, String idGame1) throws MoreThanOneActiveGame, UserDoesNotExistException, GameDoesNotExistException {
-        logger.info("User starting a new game...");
+    public void StartGame(String idUser, String idGame1) throws MoreThanOneActiveGame, UserDoesNotExistException, GameDoesNotExistException{
+        logger.info("Starting a new Game...");
+        ControlOfExistenceOfUser(idUser);
+        ControlOfExistenceOfGame(idGame1);
+        
         Game game=this.games.get(idGame1);
-        if(game==null){
-            logger.info("Game does not exist.");
-            throw new GameDoesNotExistException();
-        }
-        if(this.users.get(idUser)==null){
-            logger.info("User does not exist!");
-            throw new UserDoesNotExistException();
-        }
+
+        //this.gameUnmodified=new Game(game.getName(),game.getDescription(),game.getNumberOfLevels());
         this.users.get(idUser).addGameToList(game);
-        List<Game> partidas=this.users.get(idUser).getGames();
-        for(int i=0; i<partidas.size();i++){
-            if(partidas.get(i).getActive()==1){
-                logger.info("User has more than one active game");
-                throw new MoreThanOneActiveGame();
-            }
-        }
-        Game gameUser= this.users.get(idUser).getGameWithID(idGame1);
-        gameUser.setActive(1);
-        Date date= new Date();
-        Activity newActivity=new Activity(idGame1,date.getTime(),gameUser.getActive(),gameUser.getTotalPoints());
-        logger.info("Game correctly started.");
+        Map<String,Game> gameAndDepartures;
+        gameAndDepartures = this.users.get(idUser).getGames();
+        List<Departure> departures;
+        departures=gameAndDepartures.get(idGame1).getDepartures();
+        ControlOfMoreThanOneActiveGame(idUser);
+        Departure newDeparture=new Departure(idGame1,idUser);
+        departures.add(newDeparture);
+        this.games.get(idGame1).AddGamerToList(this.users.get(idUser));
+        logger.info("Game correctly started for user ID "+ idUser+ " and game play ID " +newDeparture.getIdDeparture()+ " and game ID "+idGame1);
     }
 
     @Override
@@ -92,64 +90,132 @@ public class GameManagerImpl implements GameManager {
 
     @Override
     public int ActualLevel(String idUser) throws UserDoesNotExistException,NoActiveGameException{
-        if(this.users.get(idUser)==null){
-            logger.info("User does not exist!");
-            throw new UserDoesNotExistException();
+        ControlOfExistenceOfUser(idUser);
+        logger.info("Starting looking for the actual level of the user...");
+        Departure departureActive= SearchForActiveDeparture(idUser);
+        if(departureActive==null){
+            throw new NoActiveGameException();
         }
-        List<Game> partidas=this.users.get(idUser).getGames();
-        for(int i=0; i<partidas.size();i++){
-            if(partidas.get(i).getActive()==1)
-                return partidas.get(i).getLevel();
-        }
-        throw new NoActiveGameException();
+        logger.info("The level of the user is..."+departureActive.getLevel());
+        return departureActive.getLevel();
     }
 
     @Override
     public int ActualPoints(String idUser) throws UserDoesNotExistException, NoActiveGameException {
-        if(this.users.get(idUser)==null){
-            logger.info("User does not exist!");
-            throw new UserDoesNotExistException();
-        }
-        logger.info("Starting giving actual points");
-        List<Game> partidas=this.users.get(idUser).getGames();
-        for(int i=0; i<partidas.size();i++){
-            if(partidas.get(i).getActive()==1)
-                logger.info("Actual points"+partidas.get(i).getTotalPoints());
-                return partidas.get(i).getTotalPoints();
-        }
-        throw new NoActiveGameException();
+        ControlOfExistenceOfUser(idUser);
+        logger.info("Starting looking for the actual points of the user...");
+        Departure departureActive= SearchForActiveDeparture(idUser);
+        ControlOfNoActiveGame(idUser);
+        logger.info("The points of the user are..."+departureActive.getPointsOfTheDeparture());
+        return departureActive.getPointsOfTheDeparture();
     }
 
     @Override
-    public int ChangeOfLevel(String idUser) throws UserDoesNotExistException, NoActiveGameException {
-        if(this.users.get(idUser)==null){
-            logger.info("User does not exist!");
-            throw new UserDoesNotExistException();
-        }
-        logger.info("Starting change of level");
-        List<Game> partidas=this.users.get(idUser).getGames();
-        for(int i=0; i<partidas.size();i++){
-            int actualLevel= partidas.get(i).getLevel();
-            if(partidas.get(i).getActive()==1){
-                actualLevel=actualLevel+1;
-                partidas.get(i).setLevel(actualLevel);
-                partidas.get(i).setTotalPoints(partidas.get(i).getTotalPoints()+partidas.get(i).getListOfLevelsOfGame().get(actualLevel).getPoints());
-                logger.info("Change done successfully. Actual level"+partidas.get(i).getLevel());
-                return partidas.get(i).getLevel();
+    public Activity ChangeOfLevel(String idUser,String idGame) throws UserDoesNotExistException, NoActiveGameException {
+        ControlOfExistenceOfUser(idUser);
+        logger.info("Changing level of the user...");
+        Departure departureActive= SearchForActiveDeparture(idUser);
+        ControlOfNoActiveGame(idUser);
+        departureActive.setPointsOfTheDeparture(this.users.get(idUser).getGames().get(idGame).getListOfLevelsOfGame().get(departureActive.getLevel()+1).getPoints());
+        departureActive.setLevel(departureActive.getLevel()+1);
+        SimpleDateFormat format1 = new SimpleDateFormat("dd/MM/yyyy");
+        Date date = new Date();
+        Activity newActivity =new Activity(idUser,departureActive.getLevel(),date.getTime(),departureActive.getActive(),departureActive.getPointsOfTheDeparture());
+        this.users.get(idUser).getGames().get(idGame).getActivityOfTheGame().add(newActivity);
+        logger.info("The user id is "+idUser+" the date of the change of level is "+date.getTime()+"and the actual level is "+departureActive.getLevel());
+        logger.info("The number of points "+ this.users.get(idUser).getName()+" has is "+departureActive.getPointsOfTheDeparture());
+        return newActivity;
+    }
+
+    @Override
+    public Departure SearchForActiveDeparture(String idUser){
+        logger.info("Looking for active departures");
+        List<Game> listOfGames = new ArrayList<>(this.users.get(idUser).getGames().values());
+        for(int j=0; j<listOfGames.size();j++){
+            List<Departure> departures= listOfGames.get(j).getDepartures();
+            logger.info("Checking if the user has more than one active departure in"+ listOfGames.get(j).getName());
+            for(int i = 0; i< departures.size(); i++){
+                if(departures.get(i).getActive()==1){
+                    logger.info("User has one active departure");
+                    return departures.get(i);
+                }
             }
         }
-        throw new NoActiveGameException();
+        return null;
+    }
+    @Override
+    public void EndingGame(String idUser, String idGame) throws UserDoesNotExistException, NoActiveGameException {
+        logger.info("Ending Game starting...");
+        ControlOfExistenceOfUser(idUser);
+        Departure departureActive=SearchForActiveDeparture(idUser);
+        ControlOfNoActiveGame(idUser);
+        departureActive.setActive(0);
+        Date date=new Date();
+        Activity newActivity =new Activity(idUser,departureActive.getLevel(),date.getTime(),departureActive.getActive(),departureActive.getPointsOfTheDeparture());
+        this.users.get(idUser).getGames().get(idGame).getActivityOfTheGame().add(newActivity);
+        logger.info("The user "+ idUser+" has ended the game!");
 
+    }
+    @Override
+    public List<User> usersByPoints(String idGame) throws GameDoesNotExistException {
+        logger.info("Returning users sorted by points...");
+        ControlOfExistenceOfGame(idGame);
+        List<User> usersOfTheGame= this.games.get(idGame).getGamers();
+        usersOfTheGame.sort((u1,u2)->Integer.compare(u2.getGames().get(idGame).getLastDeparture().getPointsOfTheDeparture(),u1.getGames().get(idGame).getLastDeparture().getPointsOfTheDeparture()));
+        return usersOfTheGame;
+    }
+    @Override
+    public List<Activity> getActivityOfUser(String idUser, String idGame) throws UserDoesNotExistException {
+        logger.info("Returning Activity of the user...");
+        ControlOfExistenceOfUser(idUser);
+        return this.users.get(idUser).getGames().get(idGame).getActivityOfTheGame();
+    }
+    @Override
+    public List<Departure> getGames(String idUser) throws UserDoesNotExistException {
+        logger.info("Returning Activity of the user...");
+        ControlOfExistenceOfUser(idUser);
+        List<Game> gamesOfUser= new ArrayList<>(this.users.get(idUser).getGames().values());
+        List<Departure> totalDepartures= new ArrayList<>();
+        for(int i=0;i<gamesOfUser.size();i++){
+            totalDepartures.addAll(gamesOfUser.get(i).getDepartures());
+        }
+        logger.info("The total games of" +this.users.get(idUser).getName()+ " are "+ totalDepartures.size());
+        return totalDepartures;
     }
 
     @Override
-    public List<Game> getGamesOfUser(String idUser) throws UserDoesNotExistException {
+    public void ControlOfExistenceOfUser(String idUser) throws UserDoesNotExistException {
         if(this.users.get(idUser)==null){
             logger.info("User does not exist!");
             throw new UserDoesNotExistException();
         }
-        return this.users.get(idUser).getGames();
+
     }
+
+    @Override
+    public void ControlOfExistenceOfGame(String idGame) throws GameDoesNotExistException {
+        if(this.games.get(idGame)==null){
+            logger.info("Game does not exist.");
+            throw new GameDoesNotExistException();
+        }
+
+    }
+    @Override
+    public void ControlOfMoreThanOneActiveGame(String idUser) throws MoreThanOneActiveGame {
+        if(SearchForActiveDeparture(idUser)!=null){
+            throw new MoreThanOneActiveGame();
+        }
+    }
+    @Override
+    public void ControlOfNoActiveGame(String idUser) throws NoActiveGameException {
+        if(SearchForActiveDeparture(idUser)==null){
+            throw new NoActiveGameException();
+        }
+    }
+
+
+
+
 
 
 
